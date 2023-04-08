@@ -18,7 +18,7 @@ from tqdm.auto import tqdm
 import config
 from data_reader import Vocabulary
 from dataset import init_dataloaders
-from model import ConvNeXtWithArcFace
+from model import ConvNeXtWithArcFace, LeNetWithArcFace
 
 
 def show_plot(history: defaultdict, elapsed_time: int, epoch: int) -> None:
