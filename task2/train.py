@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import Tuple, Any
 
 import numpy as np
+import pytorch_warmup as warmup
 import torch
 from IPython.core.display_functions import clear_output
 from matplotlib import pyplot as plt
@@ -18,7 +19,7 @@ from tqdm.auto import tqdm
 import config
 from data_reader import Vocabulary
 from dataset import init_dataloaders
-from model import ConvNeXtWithArcFace, LeNetWithArcFace
+from model import LeNetWithArcFace, ConvNeXtWithArcFace
 
 
 def show_plot(history: defaultdict, elapsed_time: int, epoch: int) -> None:
@@ -87,7 +88,7 @@ def load_state(model: nn.Module, optimizer: Any, scheduler: Any, load_path: str)
     scheduler.load_state_dict(state['scheduler'])
 
 
-def train(train_path: str, lr: float, epochs: int, checkpoint_path: str, lr_decay_rate: float = 0.9,
+def train(train_path: str, lr: float, epochs: int, checkpoint_path: str, lr_decay_rate: float = 0.6,
           embed_dim: int = 128, pretrained_path: str = None, start_epoch: int = 0) -> Tuple[nn.Module, Vocabulary]:
     gc.collect()
 
@@ -97,10 +98,11 @@ def train(train_path: str, lr: float, epochs: int, checkpoint_path: str, lr_deca
 
     # model = LeNetWithArcFace(num_classes, embed_dim).to(config.device)
     model = ConvNeXtWithArcFace(num_classes, embed_dim).to(config.device)
-    optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0.05)
+    optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0.01)
     optimizer.zero_grad()
     scheduler = optim.lr_scheduler.StepLR(optimizer, batch_per_epoch, gamma=lr_decay_rate)
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=lr_decay_rate, patience=50, min_lr=1e-4)
+    warmup_scheduler = warmup.UntunedLinearWarmup(optimizer)
 
     if pretrained_path is not None:
         load_state(model, optimizer, scheduler, pretrained_path)
@@ -133,7 +135,8 @@ def train(train_path: str, lr: float, epochs: int, checkpoint_path: str, lr_deca
             loss.backward()
             clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
-            scheduler.step()
+            with warmup_scheduler.dampening():
+                scheduler.step()
 
             with torch.no_grad():
                 logits = torch.matmul(F.normalize(embeddings), F.normalize(model.loss_fn.W, dim=0))

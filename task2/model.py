@@ -52,7 +52,7 @@ class ConvNeXtWithArcFace(nn.Module):
             nn.Conv2d(128, 256, kernel_size=2, stride=2),
             ConvNeXtBlock(256),
             nn.Flatten(),
-            nn.Linear(4 * 4 * 256, embed_dim)
+            nn.Linear(5 * 5 * 256, embed_dim)
         )
         self.loss_fn = ArcFaceLoss(margin=28.6, scale=16, num_classes=num_classes, embedding_size=embed_dim)
 
@@ -92,7 +92,7 @@ class LeNetWithArcFace(nn.Module):
             nn.MaxPool2d((2, 2)),
 
             nn.Flatten(),
-            nn.Linear(4 * 4 * 256, embed_dim)
+            nn.Linear(5 * 5 * 256, embed_dim)
         )
         self.loss_fn = ArcFaceLoss(margin=28.6, scale=16, num_classes=num_classes, embedding_size=embed_dim)
 
